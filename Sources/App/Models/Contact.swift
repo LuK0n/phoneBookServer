@@ -43,3 +43,10 @@ final class Contact : Model, Content {
         self.$user.id = userID
     }
 }
+
+struct ModifyContactRequest: Content {
+    
+    /// Contact id.
+    var contactId: UUID
+    
+}

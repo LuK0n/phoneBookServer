@@ -17,17 +17,16 @@ final class ContactController {
 
     /// Creates a new Contact for the auth'd user.
     func create(_ req: Request) throws -> EventLoopFuture<Contact> {
-
+        let user = try req.auth.require(User.self)
         
         // decode request content
         let contReq = try req.content.decode(CreateContactRequest.self)
-        return try self.createContact(contReq, req)
+        return try self.createContact(contReq, req, user)
     }
         
         
-    func createContact(_ cont: CreateContactRequest, _ req: Request) throws -> EventLoopFuture<Contact> {
+    func createContact(_ cont: CreateContactRequest, _ req: Request, _ user: User) throws -> EventLoopFuture<Contact> {
         
-        let user = try req.auth.require(User.self)
         let contact = try Contact(name: cont.name, email: cont.email, phoneNumber: cont.phoneNumb , userID: user.requireID())
         return contact.save(on: req.db).map {
             return contact
@@ -37,9 +36,9 @@ final class ContactController {
     /// Deletes an existing contact for the auth'd user.
     func delete(_ req: Request) throws -> EventLoopFuture<HTTPResponseStatus> {
         // fetch auth'd user
-        let deleteRequest = try req.content.decode(DeleteContactRequest.self)
+        let deleteRequest = try req.content.decode(ModifyContactRequest.self)
         let contactDeleteFuture = Contact.query(on: req.db).filter(\.$id == deleteRequest.contactId).first().flatMap { cont -> EventLoopFuture<Void> in
-            return cont?.delete(on: req.db) ?? req.eventLoop.makeFailedFuture(Abort(.noContent))
+            return cont?.delete(on: req.db) ?? req.eventLoop.makeFailedFuture(Abort(.notFound))
         }
         let addressesDeletedFuture = Address.query(on: req.db).filter(\.$contact.$id == deleteRequest.contactId).all().flatMap { addr -> EventLoopFuture<Void> in
             let deleteFuture = req.eventLoop.future()
@@ -59,8 +58,12 @@ final class ContactController {
         
         return picturesDeleteFuture.flatMap {
             return addressesDeletedFuture.flatMap {
-                return contactDeleteFuture.flatMap { cont -> EventLoopFuture<HTTPStatus> in
-                    req.eventLoop.makeSucceededFuture(.ok)
+                return contactDeleteFuture.flatMapResult { res -> Result<HTTPStatus, Error> in
+                    if res is Error {
+                        return .failure(Abort(.notFound))
+                    } else {
+                        return .success(.ok)
+                    }
                 }
             }
         }
@@ -73,7 +76,6 @@ final class ContactController {
 /// Represents data required to create a new contact.
 struct CreateContactRequest: Content {
     
-    
     /// Contact name.
     var name: String
     
@@ -82,12 +84,5 @@ struct CreateContactRequest: Content {
     
     /// Contact phone number
     var phoneNumb: Int
-    
-}
-
-struct DeleteContactRequest: Content {
-    
-    /// Contact id.
-    var contactId: UUID
     
 }

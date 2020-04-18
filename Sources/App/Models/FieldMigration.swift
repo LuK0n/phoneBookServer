@@ -34,6 +34,7 @@ class FieldMigration : Migration {
             .id()
             .field("name", .string, .required)
             .field("email", .string, .required)
+            .unique(on: "email")
             .field("passwordHash", .string, .required)
             .create())
         

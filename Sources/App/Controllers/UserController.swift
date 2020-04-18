@@ -17,7 +17,7 @@ final class UserController {
     }
     
     /// Creates a new user.
-    func create(_ req: Request) throws  -> EventLoopFuture<User>{
+    func create(_ req: Request) throws  -> EventLoopFuture<UserResponse>{
         // decode request content
         let userRequest = try req.content.decode(CreateUserRequest.self)
             // verify that passwords match
@@ -29,7 +29,9 @@ final class UserController {
             let hash = try Bcrypt.hash(userRequest.password)
             // save new user
             let user =  User(name: userRequest.name, email: userRequest.email, passwordHash: hash)
-        return user.save(on: req.db).map {user}
+        return user.save(on: req.db).flatMapThrowing {
+            try UserResponse(id: user.requireID(), name: user.name, email: user.email)
+        }
     }
     
     func getMeAuthenticated(_ req: Request) throws -> User {
@@ -58,7 +60,7 @@ struct CreateUserRequest: Content {
 struct UserResponse: Content {
     /// User's unique identifier.
     /// Not optional since we only return users that exist in the DB.
-    var id: Int
+    var id: UUID
     
     /// User's full name.
     var name: String

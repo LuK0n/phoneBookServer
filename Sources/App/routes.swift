@@ -12,10 +12,15 @@ public func routes(_ app: Application) throws {
     passwordProtected.post("login", use: userController.login)
     
     let bearerTokenProtected = app.grouped(UserToken.authenticator())
-    tokenProtected.get("getMeAuthenticated", use: userController.getMeAuthenticated)
+    bearerTokenProtected.get("getMeAuthenticated", use: userController.getMeAuthenticated)
     
     let contactController = ContactController()
-    tokenProtected.get("contacts", use: contactController.index)
-    tokenProtected.post("contacts", use: contactController.create)
-    tokenProtected.delete("contacts", use: contactController.delete)
+    bearerTokenProtected.get("contacts", use: contactController.index)
+    bearerTokenProtected.post("contacts", use: contactController.create)
+    bearerTokenProtected.delete("contacts", use: contactController.delete)
+    
+    let pictureController = PictureController()
+    bearerTokenProtected.post("pictures", use: pictureController.create)
+    bearerTokenProtected.get("pictures", use: pictureController.index)
+    bearerTokenProtected.delete("pictures", use: pictureController.delete)
 }
