@@ -35,9 +35,36 @@ final class ContactController {
     }
 
     /// Deletes an existing contact for the auth'd user.
-    func delete(_ req: Request) throws {
+    func delete(_ req: Request) throws -> EventLoopFuture<HTTPResponseStatus> {
         // fetch auth'd user
-        let addresses = Address.query(on: req.db)
+        let deleteRequest = try req.content.decode(DeleteContactRequest.self)
+        let contactDeleteFuture = Contact.query(on: req.db).filter(\.$id == deleteRequest.contactId).first().flatMap { cont -> EventLoopFuture<Void> in
+            return cont?.delete(on: req.db) ?? req.eventLoop.makeFailedFuture(Abort(.noContent))
+        }
+        let addressesDeletedFuture = Address.query(on: req.db).filter(\.$contact.$id == deleteRequest.contactId).all().flatMap { addr -> EventLoopFuture<Void> in
+            let deleteFuture = req.eventLoop.future()
+            for address in addr {
+                deleteFuture.and(address.delete(on: req.db))
+            }
+            return deleteFuture
+        }
+        let picturesDeleteFuture = Picture.query(on: req.db).filter(\.$contact.$id == deleteRequest.contactId).all().flatMap { pict -> EventLoopFuture<Void> in
+            let deleteFuture = req.eventLoop.future()
+            for picture in pict {
+                deleteFuture.and(picture.delete(on: req.db))
+            }
+            return deleteFuture
+            
+        }
+        
+        return picturesDeleteFuture.flatMap {
+            return addressesDeletedFuture.flatMap {
+                return contactDeleteFuture.flatMap { cont -> EventLoopFuture<HTTPStatus> in
+                    req.eventLoop.makeSucceededFuture(.ok)
+                }
+            }
+        }
+        
     }
 }
 
