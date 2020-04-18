@@ -1,39 +1,32 @@
-import Authentication
-import FluentSQLite
+import FluentMySQLDriver
+import Fluent
 import Vapor
 
 /// Called before your application initializes.
-public func configure(_ config: inout Config, _ env: inout Environment, _ services: inout Services) throws {
-    // Register providers first
-    try services.register(FluentSQLiteProvider())
-    try services.register(AuthenticationProvider())
-
-    // Register routes to the router
-    let router = EngineRouter.default()
-    try routes(router)
-    services.register(router, as: Router.self)
-
-    // Register middleware
-    var middlewares = MiddlewareConfig() // Create _empty_ middleware config
-    // middlewares.use(SessionsMiddleware.self) // Enables sessions.
-    // middlewares.use(FileMiddleware.self) // Serves files from `Public/` directory
-    middlewares.use(ErrorMiddleware.self) // Catches errors and converts to HTTP response
-    services.register(middlewares)
-
-    // Configure a SQLite database
-    let sqlite = try SQLiteDatabase(storage: .memory)
-
-    // Register the configured SQLite database to the database config.
-    var databases = DatabasesConfig()
-    databases.enableLogging(on: .sqlite)
-    databases.add(database: sqlite, as: .sqlite)
-    services.register(databases)
-
+public func configure(_ app: Application) throws {
+    
+    app.middleware.use(ErrorMiddleware.default(environment: app.environment))
+    
+    app.databases.use(.mysql(
+        hostname: "127.0.0.1",
+        username: "root",
+        password: "rootroot",
+        database: "testDb",
+        tlsConfiguration: nil
+    ), as: .mysql)
+    
+    app.migrations.add(FieldMigration())
+    app.migrations.add(RefMigration())
+    
+    app.autoMigrate()
+    
+    try routes(app)
+    
     /// Configure migrations
-    var migrations = MigrationConfig()
-    migrations.add(model: User.self, database: .sqlite)
-    migrations.add(model: UserToken.self, database: .sqlite)
-    migrations.add(model: Todo.self, database: .sqlite)
-    services.register(migrations)
+//    var migrations = MigrationConfig()
+//    migrations.add(migration: MainMigration.self, database: .mysql)
+//    migrations.add(migration: ReferenceMigration.self, database: .mysql)
+//    migrations.add(migration: NewUserMig.self, database: .mysql)
+//    services.register(migrations)
 
 }

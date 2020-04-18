@@ -1,39 +1,39 @@
 import Crypto
 import Vapor
-import FluentSQLite
+import FluentMySQLDriver
 
 /// Creates new users and logs them in.
 final class UserController {
     /// Logs a user in, returning a token for accessing protected endpoints.
-    func login(_ req: Request) throws -> Future<UserToken> {
+    func login(_ req: Request) throws -> EventLoopFuture<UserToken> {
         // get user auth'd by basic auth middleware
-        let user = try req.requireAuthenticated(User.self)
-        
+        let user = try req.auth.require(User.self)
+
         // create new token for this user
-        let token = try UserToken.create(userID: user.requireID())
-        
+        let token = try user.generateToken()
+
         // save and return token
-        return token.save(on: req)
+        return token.save(on: req.db).map {token}
     }
     
     /// Creates a new user.
-    func create(_ req: Request) throws -> Future<UserResponse> {
+    func create(_ req: Request) throws  -> EventLoopFuture<User>{
         // decode request content
-        return try req.content.decode(CreateUserRequest.self).flatMap { user -> Future<User> in
+        let userRequest = try req.content.decode(CreateUserRequest.self)
             // verify that passwords match
-            guard user.password == user.verifyPassword else {
+            guard userRequest.password == userRequest.verifyPassword else {
                 throw Abort(.badRequest, reason: "Password and verification must match.")
             }
             
             // hash user's password using BCrypt
-            let hash = try BCrypt.hash(user.password)
+            let hash = try Bcrypt.hash(userRequest.password)
             // save new user
-            return User(id: nil, name: user.name, email: user.email, passwordHash: hash)
-                .save(on: req)
-        }.map { user in
-            // map to public user response (omits password hash)
-            return try UserResponse(id: user.requireID(), name: user.name, email: user.email)
-        }
+            let user =  User(name: userRequest.name, email: userRequest.email, passwordHash: hash)
+        return user.save(on: req.db).map {user}
+    }
+    
+    func getMeAuthenticated(_ req: Request) throws -> User {
+        return try req.auth.require(User.self)
     }
 }
 
