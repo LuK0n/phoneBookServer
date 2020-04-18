@@ -37,18 +37,7 @@ final class ContactController {
     /// Deletes an existing contact for the auth'd user.
     func delete(_ req: Request) throws {
         // fetch auth'd user
-//        let user = try req.requireAuthenticated(User.self)
-//
-//        // decode request parameter (todos/:id)
-//        return try req.parameters.next(Contact.self).flatMap { contact -> Future<Void> in
-//            // ensure the todo being deleted belongs to this user
-//            guard try contact.userID == user.requireID() else {
-//                throw Abort(.forbidden)
-//            }
-//
-//            // delete model
-//            return contact.delete(on: req)
-//        }.transform(to: .ok)
+        let addresses = Address.query(on: req.db)
     }
 }
 
@@ -66,5 +55,12 @@ struct CreateContactRequest: Content {
     
     /// Contact phone number
     var phoneNumb: Int
+    
+}
+
+struct DeleteContactRequest: Content {
+    
+    /// Contact id.
+    var contactId: UUID
     
 }
