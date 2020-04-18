@@ -18,8 +18,6 @@ public func configure(_ app: Application) throws {
     app.migrations.add(FieldMigration())
     app.migrations.add(RefMigration())
     
-    app.autoMigrate()
-    
     try routes(app)
     
     /// Configure migrations

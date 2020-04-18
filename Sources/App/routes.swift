@@ -23,4 +23,9 @@ public func routes(_ app: Application) throws {
     bearerTokenProtected.post("pictures", use: pictureController.create)
     bearerTokenProtected.get("pictures", use: pictureController.index)
     bearerTokenProtected.delete("pictures", use: pictureController.delete)
+    
+    let addressController = AddressController()
+    bearerTokenProtected.post("addresses", use: addressController.create)
+    bearerTokenProtected.get("addresses", use: addressController.index)
+    bearerTokenProtected.delete("addresses", use: addressController.delete)
 }
