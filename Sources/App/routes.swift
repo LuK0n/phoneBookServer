@@ -12,6 +12,7 @@ public func routes(_ app: Application) throws {
     passwordProtected.post("login", use: userController.login)
     
     let bearerTokenProtected = app.grouped(UserToken.authenticator())
+    bearerTokenProtected.delete("userToken", use: userController.removeToken)
     bearerTokenProtected.get("getMeAuthenticated", use: userController.getMeAuthenticated)
     
     let contactController = ContactController()

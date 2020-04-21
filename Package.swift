@@ -5,9 +5,6 @@ let package = Package(
     name: "phoneBookServer",
     platforms: [
         .macOS(.v10_15),
-        .iOS(.v13),
-        .tvOS(.v13),
-        .watchOS(.v6)
      ],
     dependencies: [
         // 💧 A server-side Swift web framework.

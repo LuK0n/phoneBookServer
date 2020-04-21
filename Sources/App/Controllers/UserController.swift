@@ -34,7 +34,27 @@ final class UserController {
         }
     }
     
+    func removeToken(_ req: Request) throws -> EventLoopFuture<HTTPStatus> {
+        let user = try req.auth.require(User.self)
+        let userTokenDeleteFuture = UserToken.query(on: req.db)
+            .join(User.self, on: \UserToken.$user.$id == \User.$id, method: .inner)
+            .filter(\.$user.$id == user.id!)
+            .first().flatMap { token -> EventLoopFuture<Void> in
+                return token?.delete(on: req.db) ?? req.eventLoop.makeFailedFuture(Abort(.badRequest))
+        }
+        
+        return userTokenDeleteFuture.flatMapResult { resp -> Result<HTTPStatus, Error> in
+            if resp is Error {
+                return .failure(Abort(.notFound))
+            } else {
+                return .success(.ok)
+            }
+        }
+        
+    }
+    
     func getMeAuthenticated(_ req: Request) throws -> User {
+        try req.auth.require(User.self)
         return try req.auth.require(User.self)
     }
 }
@@ -67,4 +87,7 @@ struct UserResponse: Content {
     
     /// User's email address.
     var email: String
+}
+
+struct UserTokenDeleteReq: Content {
 }
