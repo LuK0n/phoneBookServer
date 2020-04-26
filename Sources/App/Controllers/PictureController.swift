@@ -27,8 +27,22 @@ final class PictureController {
         let createPictReq = try req.content.decode(CreatePictureRequest.self)
         
         let picture = Picture(url: URL(string: createPictReq.url)!, contactID: createPictReq.contactId)
-        return picture.save(on: req.db).map {
-            return picture
+        
+        let pictures : EventLoopFuture<Picture?> = try Picture.query(on: req.db)
+        .join(Contact.self, on: \Contact.$id == \._$id, method: .inner)
+        .filter(\.$contact.$id == createPictReq.contactId)
+        .first()
+        
+        return pictures.flatMap{ pict in
+            if pict != nil {
+                return picture.update(on: req.db).map {
+                    return picture
+                }
+            } else {
+                return picture.save(on: req.db).map {
+                    return picture
+                }
+            }
         }
     }
     

@@ -22,7 +22,7 @@ public func routes(_ app: Application) throws {
     
     let pictureController = PictureController()
     bearerTokenProtected.post("pictures", use: pictureController.create)
-    bearerTokenProtected.get("pictures", use: pictureController.index)
+    bearerTokenProtected.post("picturesGet", use: pictureController.index)
     bearerTokenProtected.delete("pictures", use: pictureController.delete)
     
     let addressController = AddressController()
