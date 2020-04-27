@@ -9,7 +9,7 @@ import Vapor
 import FluentMySQLDriver
 
 final class PictureController {
-    func index(_ req: Request) throws -> EventLoopFuture<[Picture]> {
+    func index(_ req: Request) throws -> EventLoopFuture<Picture> {
         let user = try req.auth.require(User.self)
         
         let contactRequest = try req.content.decode(ModifyContactRequest.self)
@@ -17,8 +17,7 @@ final class PictureController {
         return try Picture.query(on: req.db)
             .join(Contact.self, on: \Contact.$id == \._$id, method: .inner)
             .filter(\.$contact.$id == contactRequest.contactId)
-            .filter(Contact.self, \.$user.$id == user.requireID())
-            .all()
+            .first().unwrap(or: Abort(.badRequest))
     }
     
     func create(_ req: Request) throws -> EventLoopFuture<Picture> {
