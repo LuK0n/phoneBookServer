@@ -34,7 +34,7 @@ final class UserController {
         }
     }
     
-    func removeToken(_ req: Request) throws -> EventLoopFuture<HTTPStatus> {
+    func removeToken(_ req: Request) throws -> EventLoopFuture<GenericResponse> {
         let user = try req.auth.require(User.self)
         let userTokenDeleteFuture = UserToken.query(on: req.db)
             .join(User.self, on: \UserToken.$user.$id == \User.$id, method: .inner)
@@ -43,11 +43,11 @@ final class UserController {
                 return token?.delete(on: req.db) ?? req.eventLoop.makeFailedFuture(Abort(.badRequest))
         }
         
-        return userTokenDeleteFuture.flatMapResult { resp -> Result<HTTPStatus, Error> in
+        return userTokenDeleteFuture.flatMapResult { resp -> Result<GenericResponse, Error> in
             if resp is Error {
-                return .failure(Abort(.notFound))
+                return Result(catching: {GenericResponse(statusCode: 400)})
             } else {
-                return .success(.ok)
+                return Result(catching: {GenericResponse(statusCode: 200)})
             }
         }
         
@@ -57,37 +57,4 @@ final class UserController {
         try req.auth.require(User.self)
         return try req.auth.require(User.self)
     }
-}
-
-// MARK: Content
-
-/// Data required to create a user.
-struct CreateUserRequest: Content {
-    /// User's full name.
-    var name: String
-    
-    /// User's email address.
-    var email: String
-    
-    /// User's desired password.
-    var password: String
-    
-    /// User's password repeated to ensure they typed it correctly.
-    var verifyPassword: String
-}
-
-/// Public representation of user data.
-struct UserResponse: Content {
-    /// User's unique identifier.
-    /// Not optional since we only return users that exist in the DB.
-    var id: UUID
-    
-    /// User's full name.
-    var name: String
-    
-    /// User's email address.
-    var email: String
-}
-
-struct UserTokenDeleteReq: Content {
 }

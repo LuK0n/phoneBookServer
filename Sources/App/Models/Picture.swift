@@ -34,3 +34,12 @@ final class Picture: Model, Content {
         self.$contact.id = contactID
     }
 }
+
+struct CreatePictureRequest : Content {
+    var url: String
+    var contactId: UUID
+}
+
+struct DeletePictureRequest : Content {
+    var pictureId : UUID
+}

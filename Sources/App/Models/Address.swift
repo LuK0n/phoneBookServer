@@ -39,3 +39,16 @@ final class Address: Model, Content {
         self.$contact.id = contactId
     }
 }
+
+struct CreateAddressRequest : Content {
+    var street: String
+    var city: String
+    var zip: String
+    var houseNr: String
+    var contactId: UUID
+}
+
+struct DeleteAddressRequest : Content {
+    var addressId : UUID
+}
+

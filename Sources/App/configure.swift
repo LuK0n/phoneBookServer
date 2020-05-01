@@ -19,12 +19,5 @@ public func configure(_ app: Application) throws {
     app.migrations.add(RefMigration())
     
     try routes(app)
-    
-    /// Configure migrations
-//    var migrations = MigrationConfig()
-//    migrations.add(migration: MainMigration.self, database: .mysql)
-//    migrations.add(migration: ReferenceMigration.self, database: .mysql)
-//    migrations.add(migration: NewUserMig.self, database: .mysql)
-//    services.register(migrations)
 
 }

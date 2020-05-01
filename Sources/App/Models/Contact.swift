@@ -50,3 +50,35 @@ struct ModifyContactRequest: Content {
     var contactId: UUID
     
 }
+
+/// Represents data required to create a new contact.
+struct CreateContactRequest: Content {
+    
+    /// Contact name.
+    var name: String
+    
+    /// Contact email
+    var email: String
+    
+    /// Contact phone number
+    var phoneNumber: Int
+    
+}
+
+/// Represents data required to create a new contact.
+struct UpdateContactRequest: Content {
+    
+    var id: UUID
+    
+    /// Contact name.
+    var name: String
+    
+    /// Contact email
+    var email: String
+    
+    /// Contact phone number
+    var phoneNumber: Int
+    
+    var userId: UUID?
+    
+}

@@ -14,6 +14,27 @@ final class ContactController {
             .filter(\.$user.$id == user.id!)
             .all()
     }
+    
+    func contactUpdate(_ req: Request) throws -> EventLoopFuture<Contact> {
+        let user = try req.auth.require(User.self)
+        
+        let contReq = try req.content.decode(UpdateContactRequest.self)
+        
+        let contacts : EventLoopFuture<Contact?> = Contact.query(on: req.db)
+        .filter(\._$id == contReq.id)
+        .first()
+        
+        return contacts.flatMap{ cont in
+            return Contact.find(cont?.$id.wrappedValue!, on: req.db).flatMap { data in
+                    data?.name = contReq.name
+                    data?.email = contReq.email
+                    data?.phoneNumber = contReq.phoneNumber
+                return data!.update(on: req.db).map {
+                    return data!
+                }
+            }
+        }
+    }
 
     /// Creates a new Contact for the auth'd user.
     func create(_ req: Request) throws -> EventLoopFuture<Contact> {
@@ -27,62 +48,38 @@ final class ContactController {
         
     func createContact(_ cont: CreateContactRequest, _ req: Request, _ user: User) throws -> EventLoopFuture<Contact> {
         
-        let contact = try Contact(name: cont.name, email: cont.email, phoneNumber: cont.phoneNumb , userID: user.requireID())
+        let contact = try Contact(name: cont.name, email: cont.email, phoneNumber: cont.phoneNumber , userID: user.requireID())
         return contact.save(on: req.db).map {
             return contact
         }
     }
 
     /// Deletes an existing contact for the auth'd user.
-    func delete(_ req: Request) throws -> EventLoopFuture<HTTPResponseStatus> {
+    func delete(_ req: Request) throws -> EventLoopFuture<GenericResponse> {
         // fetch auth'd user
         let deleteRequest = try req.content.decode(ModifyContactRequest.self)
         let contactDeleteFuture = Contact.query(on: req.db).filter(\.$id == deleteRequest.contactId).first().flatMap { cont -> EventLoopFuture<Void> in
             return cont?.delete(on: req.db) ?? req.eventLoop.makeFailedFuture(Abort(.notFound))
         }
-        let addressesDeletedFuture = Address.query(on: req.db).filter(\.$contact.$id == deleteRequest.contactId).all().flatMap { addr -> EventLoopFuture<Void> in
-            let deleteFuture = req.eventLoop.future()
-            for address in addr {
-                deleteFuture.and(address.delete(on: req.db))
-            }
-            return deleteFuture
+        let addressesDeletedFuture = Address.query(on: req.db).filter(\.$contact.$id == deleteRequest.contactId).first().flatMap { addr -> EventLoopFuture<Void> in
+            return addr?.delete(on: req.db) ?? req.eventLoop.makeSucceededFuture(())
         }
-        let picturesDeleteFuture = Picture.query(on: req.db).filter(\.$contact.$id == deleteRequest.contactId).all().flatMap { pict -> EventLoopFuture<Void> in
-            let deleteFuture = req.eventLoop.future()
-            for picture in pict {
-                deleteFuture.and(picture.delete(on: req.db))
-            }
-            return deleteFuture
+        let picturesDeleteFuture = Picture.query(on: req.db).filter(\.$contact.$id == deleteRequest.contactId).first().flatMap { pict -> EventLoopFuture<Void> in
+            return pict?.delete(on: req.db) ?? req.eventLoop.makeFailedFuture(Abort(.badRequest))
             
         }
         
         return picturesDeleteFuture.flatMap {
             return addressesDeletedFuture.flatMap {
-                return contactDeleteFuture.flatMapResult { res -> Result<HTTPStatus, Error> in
+                return contactDeleteFuture.flatMapResult { res -> Result<GenericResponse, Error> in
                     if res is Error {
-                        return .failure(Abort(.notFound))
+                        return Result(catching: {GenericResponse(statusCode: 400)})
                     } else {
-                        return .success(.ok)
+                        return Result(catching: {GenericResponse(statusCode: 200)})
                     }
                 }
             }
         }
         
     }
-}
-
-// MARK: Content
-
-/// Represents data required to create a new contact.
-struct CreateContactRequest: Content {
-    
-    /// Contact name.
-    var name: String
-    
-    /// Contact email
-    var email: String
-    
-    /// Contact phone number
-    var phoneNumb: Int
-    
 }
